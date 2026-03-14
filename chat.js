@@ -7,17 +7,47 @@ const messageInput = document.getElementById('message');
 const sendBtn = document.getElementById('send-btn');
 
 let typingTimeout;
+let toxicityModel = null;
+
+// Load the toxicity model on page load
+const threshold = 0.9;
+toxicity.load(threshold).then((model) => {
+  toxicityModel = model;
+  console.log('Toxicity model loaded');
+});
+
+// Check message for toxicity
+async function checkToxicity(message) {
+  if (!toxicityModel) return message;
+
+  const predictions = await toxicityModel.classify(message);
+  for (const prediction of predictions) {
+    if (prediction.results[0].match === true) {
+      return '*****';
+    }
+  }
+  return message;
+}
 
 // Send message
-function sendMessage() {
+async function sendMessage() {
   const username = usernameInput.value.trim() || 'Anonymous';
   const message = messageInput.value.trim();
 
   if (!message) return;
 
-  socket.emit('message', { username, message });
+  // Disable send button while checking
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Checking...';
+
+  const filteredMessage = await checkToxicity(message);
+
+  socket.emit('message', { username, message: filteredMessage });
   messageInput.value = '';
   socket.emit('typing', '');
+
+  sendBtn.disabled = false;
+  sendBtn.textContent = 'Send Message';
 }
 
 // Send on button click
