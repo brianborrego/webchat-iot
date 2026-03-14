@@ -54,21 +54,18 @@ io.on('connection', async (socket) => {
   }
 
   // Handle incoming messages
-  socket.on('message', async (data) => {
-    // Save message to Firestore
-    try {
-      const docRef = await addDoc(collection(db, 'messages'), {
-        username: data.username,
-        message: data.message,
-        timestamp: Timestamp.now()
-      });
-      console.log('Message saved with ID:', docRef.id);
-    } catch (err) {
-      console.error('Error saving message:', err);
-    }
-
-    // Broadcast message to all clients
+  socket.on('message', (data) => {
+    // Broadcast message to all clients immediately
     io.emit('message', data);
+
+    // Save message to Firestore in the background
+    addDoc(collection(db, 'messages'), {
+      username: data.username,
+      message: data.message,
+      timestamp: Timestamp.now()
+    })
+      .then((docRef) => console.log('Message saved with ID:', docRef.id))
+      .catch((err) => console.error('Error saving message:', err));
   });
 
   // Handle typing indicator

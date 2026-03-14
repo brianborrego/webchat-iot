@@ -5,6 +5,7 @@ const typingIndicator = document.getElementById('typing-indicator');
 const usernameInput = document.getElementById('username');
 const messageInput = document.getElementById('message');
 const sendBtn = document.getElementById('send-btn');
+const clearBtn = document.getElementById('clear-btn');
 
 let typingTimeout;
 let toxicityModel = null;
@@ -38,7 +39,7 @@ async function sendMessage() {
 
   // Disable send button while checking
   sendBtn.disabled = true;
-  sendBtn.textContent = 'Checking...';
+  sendBtn.textContent = '[...]';
 
   const filteredMessage = await checkToxicity(message);
 
@@ -47,8 +48,13 @@ async function sendMessage() {
   socket.emit('typing', '');
 
   sendBtn.disabled = false;
-  sendBtn.textContent = 'Send Message';
+  sendBtn.textContent = '[SEND]';
 }
+
+// Clear messages from display
+clearBtn.addEventListener('click', () => {
+  messagesDiv.innerHTML = '';
+});
 
 // Send on button click
 sendBtn.addEventListener('click', sendMessage);
@@ -73,7 +79,9 @@ messageInput.addEventListener('input', () => {
 
 // Listen for messages
 socket.on('message', (data) => {
-  appendMessage(data.username, data.message);
+  const currentUser = usernameInput.value.trim() || 'Anonymous';
+  const isSelf = data.username === currentUser;
+  appendMessage(data.username, data.message, isSelf);
 });
 
 // Listen for typing
@@ -82,9 +90,10 @@ socket.on('typing', (data) => {
 });
 
 // Append message to chat
-function appendMessage(username, message) {
+function appendMessage(username, message, isSelf) {
   const msgDiv = document.createElement('div');
   msgDiv.classList.add('message');
+  if (isSelf) msgDiv.classList.add('self');
   msgDiv.innerHTML = `
     <div class="username">${escapeHtml(username)}</div>
     <div class="text">${escapeHtml(message)}</div>
